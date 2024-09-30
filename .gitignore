@@ -46,3 +46,4 @@ vendor/
 docker-compose.override.yml
 .env
 
+/uploads/
