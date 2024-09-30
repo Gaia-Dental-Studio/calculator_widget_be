@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"Gaia-Dental-Studio/calculator_widget_be/helper"
 	"Gaia-Dental-Studio/calculator_widget_be/model"
 	"encoding/json"
 	"fmt"
@@ -12,7 +13,6 @@ import (
 	"time"
 
 	"gorm.io/gorm"
-	// "gorm.io/gorm"
 )
 
 var DB *gorm.DB
@@ -39,70 +39,42 @@ func StoreProduct(w http.ResponseWriter, r *http.Request) {
 	// Get the file
 	file, header, err := r.FormFile("image")
 	if err != nil {
-		http.Error(w, "Error retrieving file", http.StatusBadRequest)
+		http.Error(w, "Error retrieving image", http.StatusBadRequest)
 		return
 	}
 	defer file.Close()
 
-	// Create uploads folder if it doesn't exist
-	os.MkdirAll("uploads/images", os.ModePerm)
-
-	// Generate a unique filename based on the original filename and timestamp
-	uniqueName := fmt.Sprintf("%s_%s", time.Now().Format("20060102150405"), header.Filename)
-	out, err := os.Create(filepath.Join("uploads/images", uniqueName))
-
-	if err != nil {
-		http.Error(w, "Error creating file", http.StatusInternalServerError)
-		return
-	}
-	defer out.Close()
-
-	// Copy the uploaded file to the created file
-	_, err = io.Copy(out, file)
-	if err != nil {
-		http.Error(w, "Error saving file", http.StatusInternalServerError)
-		return
-	}
+    imagePath, err := helper.UploadFile(file, header, "uploads/images")
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
 
 // Get the file
 	filePdf, headerPdf, errPdf := r.FormFile("pdf")
 	if errPdf != nil {
-		http.Error(w, "Error retrieving file", http.StatusBadRequest)
+		http.Error(w, "Error retrieving pdf", http.StatusBadRequest)
 		return
 	}
 	defer filePdf.Close()
 
-	// Create uploads folder if it doesn't exist
-	os.MkdirAll("uploads/pdf", os.ModePerm)
-
-	// Generate a unique filename based on the original filename and timestamp
-	uniqueNamePdf := fmt.Sprintf("%s_%s", time.Now().Format("20060102150405"), headerPdf.Filename)
-	outPdf, errPdf := os.Create(filepath.Join("uploads/pdf", uniqueNamePdf))
-
-	if errPdf != nil {
-		http.Error(w, "Error creating file", http.StatusInternalServerError)
-		return
-	}
-	defer outPdf.Close()
-
-	// Copy the uploaded file to the created file
-	_, err = io.Copy(out, file)
-	if err != nil {
-		http.Error(w, "Error saving file", http.StatusInternalServerError)
-		return
-	}
+    pdfPath, err := helper.UploadFile(filePdf, headerPdf, "uploads/pdf")
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
 
 	product := &model.Product{
 		NameProduct: nameProduct,
 		Description: description, 
         Category: category,
-        Image: uniqueName,
-        Document: uniqueNamePdf,
+        Image: imagePath,
+        Document: pdfPath,
     }
 
 	result := DB.Create(&product)
 	if result.Error != nil {
-		http.Error(w, "Error saving file", http.StatusInternalServerError)
+		http.Error(w, "Error saving data", http.StatusInternalServerError)
 		return
 	}
 	// Log data yang diterima
