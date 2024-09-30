@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"Gaia-Dental-Studio/calculator_widget_be/model"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,15 +10,12 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"gorm.io/gorm"
+	// "gorm.io/gorm"
 )
 
-// Struct untuk menyimpan data produk
-type Product struct {
-	NameProduct string `json:"name_product"`
-	Description string `json:"description"`
-	Category    string `json:"category"`
-	// Image //what a type for image
-}
+var DB *gorm.DB
 
 // Function untuk menangani request dan mengembalikan JSON response
 func StoreProduct(w http.ResponseWriter, r *http.Request) {
@@ -33,20 +31,25 @@ func StoreProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+  // Mengambil data dari form
+    nameProduct := r.FormValue("name_product")
+    description := r.FormValue("description")
+    category := r.FormValue("category")
+
 	// Get the file
-    file, header, err := r.FormFile("image")
+	file, header, err := r.FormFile("image")
 	if err != nil {
 		http.Error(w, "Error retrieving file", http.StatusBadRequest)
 		return
 	}
 	defer file.Close()
 
-    // Create uploads folder if it doesn't exist
-    os.MkdirAll("uploads", os.ModePerm) 
+	// Create uploads folder if it doesn't exist
+	os.MkdirAll("uploads/images", os.ModePerm)
 
-    // Generate a unique filename based on the original filename and timestamp
-    uniqueName := fmt.Sprintf("%s_%s", time.Now().Format("20060102150405"), header.Filename)
-    out, err := os.Create(filepath.Join("uploads", uniqueName))
+	// Generate a unique filename based on the original filename and timestamp
+	uniqueName := fmt.Sprintf("%s_%s", time.Now().Format("20060102150405"), header.Filename)
+	out, err := os.Create(filepath.Join("uploads/images", uniqueName))
 
 	if err != nil {
 		http.Error(w, "Error creating file", http.StatusInternalServerError)
@@ -61,9 +64,47 @@ func StoreProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Deklarasikan variabel untuk menyimpan produk
-	var product Product
+// Get the file
+	filePdf, headerPdf, errPdf := r.FormFile("pdf")
+	if errPdf != nil {
+		http.Error(w, "Error retrieving file", http.StatusBadRequest)
+		return
+	}
+	defer filePdf.Close()
 
+	// Create uploads folder if it doesn't exist
+	os.MkdirAll("uploads/pdf", os.ModePerm)
+
+	// Generate a unique filename based on the original filename and timestamp
+	uniqueNamePdf := fmt.Sprintf("%s_%s", time.Now().Format("20060102150405"), headerPdf.Filename)
+	outPdf, errPdf := os.Create(filepath.Join("uploads/pdf", uniqueNamePdf))
+
+	if errPdf != nil {
+		http.Error(w, "Error creating file", http.StatusInternalServerError)
+		return
+	}
+	defer outPdf.Close()
+
+	// Copy the uploaded file to the created file
+	_, err = io.Copy(out, file)
+	if err != nil {
+		http.Error(w, "Error saving file", http.StatusInternalServerError)
+		return
+	}
+
+	product := &model.Product{
+		NameProduct: nameProduct,
+		Description: description, 
+        Category: category,
+        Image: uniqueName,
+        Document: uniqueNamePdf,
+    }
+
+	result := DB.Create(&product)
+	if result.Error != nil {
+		http.Error(w, "Error saving file", http.StatusInternalServerError)
+		return
+	}
 	// Log data yang diterima
 	log.Printf("Received product: Name Product: %s,Description: %s,Category: %s\n", product.NameProduct, product.Description, product.Category)
 

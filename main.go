@@ -2,12 +2,19 @@ package main
 
 import (
 	"Gaia-Dental-Studio/calculator_widget_be/controller"
+	"Gaia-Dental-Studio/calculator_widget_be/model"
+	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
+
+var DB *gorm.DB
+var err error
 
 // CORS Middleware
 func corsMiddleware(next http.Handler) http.Handler {
@@ -27,9 +34,22 @@ func corsMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+func ConnectDatabase() {
+    dsn := "host=localhost user=rivaldosetyo password=1212 dbname=medigear_db port=5432 sslmode=disable TimeZone=Asia/Jakarta"
+    DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+    if err != nil {
+        log.Fatal("Failed to connect to database!", err)
+    }
+    fmt.Println("Database connected successfully")
+
+    // Auto-migrate the schema
+    DB.AutoMigrate(&model.Product{})
+}
+
 func main() {
 	r := mux.NewRouter()
-
+    ConnectDatabase()
+    controller.DB = DB
 	// Apply CORS middleware globally
 	//  r.Use(corsMiddleware)
 
