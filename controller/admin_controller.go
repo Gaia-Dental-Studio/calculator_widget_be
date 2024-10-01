@@ -4,13 +4,9 @@ import (
 	"Gaia-Dental-Studio/calculator_widget_be/helper"
 	"Gaia-Dental-Studio/calculator_widget_be/model"
 	"encoding/json"
-	"fmt"
-	"io"
 	"log"
 	"net/http"
-	"os"
-	"path/filepath"
-	"time"
+
 
 	"gorm.io/gorm"
 )
@@ -50,7 +46,7 @@ func StoreProduct(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-// Get the file
+    // Get the file
 	filePdf, headerPdf, errPdf := r.FormFile("pdf")
 	if errPdf != nil {
 		http.Error(w, "Error retrieving pdf", http.StatusBadRequest)
@@ -90,4 +86,24 @@ func StoreProduct(w http.ResponseWriter, r *http.Request) {
 		"message": "Product stored successfully",
 		"product": product,
 	})
+}
+
+const BaseURL = "http://localhost:8080/"
+
+func GetProducts(w http.ResponseWriter, r *http.Request) {
+	var products []model.Product
+
+	result := DB.Find(&products)
+	if result.Error != nil {
+		http.Error(w, "Failed to fetch products", http.StatusInternalServerError)
+		return
+	}
+
+	for i, product := range products {
+		products[i].Image = BaseURL + product.Image
+		products[i].Document = BaseURL + product.Document
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(products)
 }
