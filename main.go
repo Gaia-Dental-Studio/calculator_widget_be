@@ -53,6 +53,7 @@ func main() {
 
 	api.HandleFunc("/create-product", controller.StoreProduct).Methods("POST")
 	api.HandleFunc("/get-products", controller.GetProducts).Methods("GET")
+	api.HandleFunc("/get-product", controller.GetProductsById).Methods("GET")
 
 	cors := handlers.CORS(
 		handlers.AllowedOrigins([]string{"http://localhost:3000"}), // Ganti dengan domain frontend Anda

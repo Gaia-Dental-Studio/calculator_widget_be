@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-
+	"strconv"
 
 	"gorm.io/gorm"
 )
@@ -27,10 +27,11 @@ func StoreProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-  // Mengambil data dari form
     nameProduct := r.FormValue("name_product")
     description := r.FormValue("description")
     category := r.FormValue("category")
+    price := r.FormValue("price")
+    freeWarranty := r.FormValue("free_warranty")
 
 	// Get the file
 	file, header, err := r.FormFile("image")
@@ -66,6 +67,8 @@ func StoreProduct(w http.ResponseWriter, r *http.Request) {
         Category: category,
         Image: imagePath,
         Document: pdfPath,
+        Price: price,
+        FreeWarranty: freeWarranty,
     }
 
 	result := DB.Create(&product)
@@ -73,14 +76,11 @@ func StoreProduct(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error saving data", http.StatusInternalServerError)
 		return
 	}
-	// Log data yang diterima
 	log.Printf("Received product: Name Product: %s,Description: %s,Category: %s\n", product.NameProduct, product.Description, product.Category)
 
-	// Mengatur header response
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	// Kembalikan response JSON
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status":  200,
 		"message": "Product stored successfully",
@@ -106,4 +106,28 @@ func GetProducts(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(products)
+}
+
+func GetProductsById(w http.ResponseWriter, r *http.Request) {
+    // Get the ID from query parameters
+	idStr := r.URL.Query().Get("id")
+
+	// Convert ID from string to integer
+	id, err := strconv.Atoi(idStr)
+	if err != nil || id <= 0 {
+		http.Error(w, "Invalid product ID", http.StatusBadRequest)
+		return
+	}
+
+	// Select product by ID from the database
+	var product model.Product
+	result := DB.First(&product, id)
+	if result.Error != nil {
+		http.Error(w, "Product not found", http.StatusNotFound)
+		return
+	}
+
+	// Return product as JSON
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(product)
 }
