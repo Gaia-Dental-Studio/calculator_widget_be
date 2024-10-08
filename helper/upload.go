@@ -32,3 +32,26 @@ func UploadFile(file multipart.File, header *multipart.FileHeader, destinationDi
 
 	return filePath, nil
 }
+
+// Function to safely remove a file if it exists
+func RemoveFileIfExists(filePath string) error {
+    if filePath == "" {
+        // File path is empty, no need to remove anything
+        return nil
+    }
+    
+    // Attempt to remove the file
+    err := os.Remove(filePath)
+    if err != nil {
+        // If the error is because the file does not exist, ignore it
+        if os.IsNotExist(err) {
+            fmt.Printf("File does not exist: %s\n", filePath)
+            return nil
+        }
+        // Return any other error
+        return err
+    }
+
+    fmt.Printf("Successfully deleted file: %s\n", filePath)
+    return nil
+}

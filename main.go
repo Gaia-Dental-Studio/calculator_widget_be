@@ -35,18 +35,16 @@ func corsMiddleware(next http.Handler) http.Handler {
 }
 
 func ConnectDatabase() {
-	// Mendapatkan informasi koneksi dari environment variables
 	dbHost := os.Getenv("DB_HOST")
 	dbPort := os.Getenv("DB_PORT")
 	dbUser := os.Getenv("DB_USER")
 	dbPassword := os.Getenv("DB_PASSWORD")
 	dbName := os.Getenv("DB_NAME")
 
-	// Membuat connection string untuk GORM menggunakan fmt.Sprintf
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=Asia/Jakarta",
 		dbHost, dbUser, dbPassword, dbName, dbPort)
         fmt.Print(dsn)
-	// Membuka koneksi ke database PostgreSQL menggunakan GORM
+
 	var err error
 	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
@@ -58,7 +56,6 @@ func ConnectDatabase() {
 }
 
 func main() {
-	// Load .env file
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")
@@ -67,17 +64,22 @@ func main() {
 	r := mux.NewRouter()
 	ConnectDatabase()
 	controller.DB = DB
+
+    // All prefix uploads use this end point for get files
 	r.PathPrefix("/uploads/").Handler(http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads/"))))
 
 	api := r.PathPrefix("/api/v0.0.1").Subrouter()
 
-	api.HandleFunc("/create-product", controller.StoreProduct).Methods("POST")
-	api.HandleFunc("/get-products", controller.GetProducts).Methods("GET")
-	api.HandleFunc("/get-product", controller.GetProductsById).Methods("GET")
+	product := api.PathPrefix("/product").Subrouter()
+	product.HandleFunc("/create", controller.StoreProduct).Methods("POST")
+	product.HandleFunc("/products", controller.GetProducts).Methods("GET")
+	product.HandleFunc("/product", controller.GetProductsById).Methods("GET")
+	product.HandleFunc("/delete", controller.DeleteProduct).Methods("DELETE")
+	product.HandleFunc("/update", controller.UpdateProduct).Methods("PUT")
 
 	cors := handlers.CORS(
-		handlers.AllowedOrigins([]string{"http://localhost:3000"}), // Ganti dengan domain frontend Anda
-		handlers.AllowedMethods([]string{"POST", "OPTIONS"}),
+		handlers.AllowedOrigins([]string{"http://localhost:3000"}),
+    	handlers.AllowedMethods([]string{"POST", "DELETE", "PUT", "OPTIONS"}), 
 		handlers.AllowedHeaders([]string{"Content-Type"}),
 	)
 
